@@ -1,0 +1,17 @@
+{
+  "name": "養生 YOJO",
+  "short_name": "養生",
+  "description": "Oura の数値と毎日の記録から、体調を自分のふだんと比べて、やさしい言葉で伝えます",
+  "lang": "ja",
+  "start_url": "./#/today",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#f8f9fa",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

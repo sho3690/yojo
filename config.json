@@ -1,0 +1,8 @@
+{
+  "v": 1,
+  "salt": "xNfzdRRCvCgQwbEI_uNX-A",
+  "iterations": 210000,
+  "check": "f74ab5fc1565ad71",
+  "relay": "https://ntfy.sh",
+  "repo": "sho3690/yojo"
+}

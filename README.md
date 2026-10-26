@@ -45,24 +45,18 @@ Oura リングの数値（睡眠・回復・活動）と毎日の体調の記録
   止めるとき: `gh workflow disable sync.yml -R sho3690/yojo`
   / 再開するとき: `gh workflow enable sync.yml -R sho3690/yojo && gh workflow run sync.yml -R sho3690/yojo`
 
-## Oura とつなぐ（どちらか1つ）
+## Oura とつなぐ（OAuth。30日ごとにつなぎ直し）
 
-アプリの「設定 → Oura とのつながり」にも同じ手順があります。
+アプリの「設定 → Oura とのつながり」にも同じ手順（入れる値のコピー付き）があります。
 
-**A. 個人用トークン（手順が少ない）**
-1. https://cloud.ouraring.com/personal-access-tokens で新しいトークンを作ってコピー
-2. ターミナルで次の1行を実行し、聞かれたら貼り付けて Enter（画面には出ません）
-   ```
-   gh secret set OURA_TOKEN -R sho3690/yojo
-   ```
-3. 15分ほどで数値が届きます
-
-Oura は個人用トークンを「廃止予定（Deprecated）」としています。作れないときは B で。
-
-**B. Oura の連携（OAuth。30日ごとにつなぎ直し）**
-1. https://cloud.ouraring.com/oauth/applications で自分用のアプリを登録。Redirect URI に `https://sho3690.github.io/yojo/` を入れる
+1. https://developer.ouraring.com/applications で「Create New」。次のとおり入れて「Create Application」
+   - Website / Redirect URIs: `https://sho3690.github.io/yojo/`
+   - Privacy Policy: `https://sho3690.github.io/yojo/policy.html#privacy` / Terms of Service: `…/policy.html#terms`
+   - Scopes: Daily・Heartrate・SpO2・Stress
 2. アプリの設定で Client ID を貼り、「Oura でつなぐ」→ Oura の画面で許可（Client Secret は使いません）
 3. トークン（30日有効）は暗号化して中継経由で Actions に渡り、保存データの中に暗号化して置かれます。期限の7日前から画面にお知らせが出ます
+
+Oura は 2026年に個人用トークン（Personal Access Token）の新規作成を止めました。以前に作ったトークンを Secrets の `OURA_TOKEN` に入れた場合も動きますが、近く使えなくなるため上の方法に切り替えてください。
 
 ## 合言葉を変える
 

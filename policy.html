@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<title>養生 YOJO — プライバシーと利用条件</title>
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="doc">
+  <p class="doc-brand">養生 <span>YOJO</span></p>
+  <h1>プライバシーと利用条件</h1>
+  <p class="doc-date">2026年10月27日</p>
+
+  <section id="privacy">
+    <h2>プライバシー</h2>
+    <p>養生 YOJO は、作った本人が自分の体調を見るための個人用アプリです。ほかの人のデータは集めません。</p>
+    <h3>Oura から受け取る情報</h3>
+    <ul>
+      <li>毎日のまとめ：睡眠・回復（レディネス。体温の変化を含む）・活動・ストレス・血中酸素</li>
+      <li>睡眠ごとの記録：寝た時刻・起きた時刻・長さ・眠りの段階・心拍・HRV・呼吸</li>
+    </ul>
+    <h3>使いみち</h3>
+    <p>自分の数値を、自分のふだん（直前45日）と比べて画面に出すためだけに使います。広告・販売・第三者への提供はしません。</p>
+    <h3>保管のしかた</h3>
+    <ul>
+      <li>数値と記録は、合言葉から作った鍵で暗号化（AES-256-GCM）してから保存します。合言葉を持たない人は中身を読めません。</li>
+      <li>保存先は GitHub、端末どうしの受け渡しには ntfy.sh を使います。どちらにも暗号文だけを置きます（ntfy.sh には約12時間）。</li>
+      <li>Oura の数値は400日を過ぎると消します。</li>
+    </ul>
+    <h3>やめるとき</h3>
+    <p>アプリの「設定 → Oura とのつながり → つながりを切る」で、Oura 側の許可も取り消します。Oura のアカウント設定からも取り消せます。</p>
+  </section>
+
+  <section id="terms">
+    <h2>利用条件</h2>
+    <ul>
+      <li>個人用・無料のアプリです。動きや数値の正しさは保証しません。</li>
+      <li>医療の診断ではありません。数値は Oura の推定です。気になる症状があるときは、数値にかかわらず医療機関に相談してください。</li>
+      <li>内容は予告なく変わることがあります。</li>
+    </ul>
+  </section>
+
+  <p class="doc-back"><a href="./">アプリに戻る</a></p>
+</main>
+</body>
+</html>

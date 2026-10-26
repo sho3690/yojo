@@ -506,7 +506,25 @@ details.raw summary { cursor: pointer; min-height: 44px; display: flex; align-it
 .steps li::marker { font-weight: 800; color: var(--text); }
 .code { display: flex; align-items: center; gap: .25rem; margin-top: .375rem; padding: .25rem .25rem .25rem .75rem; border-radius: var(--r-md); background: var(--surface-muted); border: 1px solid var(--border); }
 .code code { flex: 1; min-width: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8125rem; color: var(--text); overflow-wrap: anywhere; }
+.fill { margin: .5rem 0 0; display: grid; gap: .25rem; }
+.fill dt { margin-top: .5rem; font-size: .8125rem; font-weight: 700; color: var(--text); }
+.fill dt:first-child { margin-top: 0; }
+.fill dd { margin: 0; }
+.fill dd .help { display: block; margin-top: .25rem; }
 .fold-sm { margin-top: 1rem; border-top: 1px solid var(--border); padding-top: .25rem; }
 details.fold.fold-sm { margin-top: 1rem; padding-top: .25rem; }
 .redflags { margin: .5rem 0 0; padding-left: 1.25rem; display: grid; gap: .5rem; font-size: .875rem; color: var(--text-2); line-height: 1.7; }
 .sheet .facts { grid-template-columns: 9.5em 1fr; }
+
+/* ---- プライバシーと利用条件（policy.html） ---- */
+.doc { max-width: 720px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.doc-brand { font-size: 1.125rem; font-weight: 800; }
+.doc-brand span { margin-left: .375rem; font-size: .75rem; font-weight: 700; letter-spacing: .14em; color: var(--text-3); }
+.doc h1 { margin-top: 1.5rem; font-size: 1.75rem; font-weight: 800; }
+.doc-date { margin-top: .25rem; font-size: .875rem; color: var(--text-3); }
+.doc section { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); scroll-margin-top: 1rem; }
+.doc h2 { font-size: 1.375rem; font-weight: 800; }
+.doc h3 { margin-top: 1.5rem; font-size: 1rem; font-weight: 700; }
+.doc section > p, .doc ul { margin-top: .5rem; color: var(--text-2); line-height: 1.7; }
+.doc ul { padding-left: 1.25rem; display: grid; gap: .375rem; }
+.doc-back { margin-top: 2.5rem; }

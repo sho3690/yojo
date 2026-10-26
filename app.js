@@ -66,9 +66,11 @@ const app = {
   view: 'today', period: 30, sheet: null, lastSnap: 0, relayOk: true, snapOk: true, trigger: null, es: null,
   specs: [], chartsFirst: true, oauthReturn: null,
 };
-// daily: 睡眠・回復・活動 / spo2: 血中酸素。睡眠の記録には心拍の並びも含まれるため、取れないことがないよう heartrate も求める
-const SCOPE = 'daily heartrate spo2';
+// daily: 睡眠・回復・活動 / spo2: 血中酸素 / stress: ストレス（2026年に daily から分かれた）。
+// 睡眠の記録には心拍の並びも含まれるため、取れないことがないよう heartrate も求める
+const SCOPE = 'daily heartrate spo2 stress';
 const AUTHORIZE = 'https://cloud.ouraring.com/oauth/authorize';
+const OURA_APPS = 'https://developer.ouraring.com/applications';
 const redirectUri = () => `${location.origin}${location.pathname}`;
 const repo = () => app.cfg?.repo || 'sho3690/yojo';
 
@@ -752,24 +754,34 @@ function ouraGroup(st) {
     o.source === 'oauth' && h('div', { class: 'actions-row' },
       h('button', { class: 'btn btn-secondary btn-sm', type: 'button', 'data-action': 'oauth-again' }, icon('refresh'), 'つなぎ直す（30日延びます）'),
       h('button', { class: 'btn btn-danger btn-sm', type: 'button', 'data-action': 'oura-forget' }, 'つながりを切る')),
-    o.source === 'pat' && h('p', { class: 'help mt' }, `個人用トークンは GitHub の Secrets（OURA_TOKEN）に入っています。やめるときは Oura の画面でトークンを削除してください。`),
-    !connected && h('p', { class: 'mt' }, 'つなぎ方は2つあります。どちらか1つで大丈夫です。'),
-    h('details', { class: 'fold fold-sm', open: !connected && !o.clientId },
-      h('summary', {}, '個人用トークンでつなぐ（手順が少ない）'),
+    o.source === 'pat' && h('p', { class: 'help mt' }, '個人用トークン（GitHub の OURA_TOKEN）でつながっています。Oura は個人用トークンを近く止めるので、下の手順で切り替えてください。'),
+    !connected && h('p', { class: 'mt' }, '自分用の「連携アプリ」を Oura に登録して（無料・最初の1回だけ）、それでつなぎます。'),
+    h('details', { class: 'fold fold-sm', open: !connected || o.source === 'pat' },
+      h('summary', {}, 'Oura とつなぐ手順'),
       h('ol', { class: 'steps' },
-        h('li', {}, 'Oura のサイトで「Personal Access Tokens」を開き、新しいトークンを作ってコピーします。', h('div', { class: 'mt' }, extLink('https://cloud.ouraring.com/personal-access-tokens', 'Oura のトークンの画面'))),
-        h('li', {}, 'Mac のターミナルで次の1行を実行し、聞かれたらトークンを貼り付けて Enter を押します（貼っても画面には出ません）。', codeBox(`gh secret set OURA_TOKEN -R ${repo()}`)),
-        h('li', {}, '15分ほどで数値が届きます。')),
-      h('p', { class: 'help mt' }, 'Oura は個人用トークンを「廃止予定」としています。作れないときは、下の「Oura の連携」でつないでください。')),
-    h('details', { class: 'fold fold-sm', open: !connected && !!o.clientId },
-      h('summary', {}, 'Oura の連携でつなぐ（30日ごとにつなぎ直し）'),
-      h('ol', { class: 'steps' },
-        h('li', {}, 'Oura の開発者ページで、自分用のアプリを登録します（無料）。「Redirect URI」には次の住所をそのまま入れます。',
-          codeBox(redirectUri()), h('div', { class: 'mt' }, extLink('https://cloud.ouraring.com/oauth/applications', 'Oura の開発者ページ'))),
-        h('li', {}, '登録すると出てくる「Client ID」を貼り付けます。「Client Secret」はいりません（入れないでください）。',
+        h('li', {}, 'Oura の開発者ページを開き、右上の「Create New」を押します。', h('div', { class: 'mt' }, extLink(OURA_APPS, 'Oura の開発者ページ'))),
+        h('li', {}, '次のとおりに入れます。', fillList()),
+        h('li', {}, 'いちばん下の「I agree to the Oura API Agreement」にチェックを入れ、「Create Application」を押します。'),
+        h('li', {}, '出てきた「Client ID」をコピーして、ここに貼り付けます。「Client Secret」はいりません（どこにも入れないでください）。',
           h('div', { class: 'field mt', style: { marginBottom: 0 } }, h('label', { for: 's-cid' }, 'Client ID'), cid, cidErr)),
-        h('li', {}, '「Oura でつなぐ」を押し、Oura の画面で許可します。', h('div', { class: 'mt' }, connect))),
-      h('p', { class: 'help mt' }, 'この方法のつながりは30日で切れます。期限が近づくと上にお知らせが出るので、そのときにもう一度つないでください。「つながりを切る」を押すと、15分ほどで Oura 側の許可も取り消します。')));
+        h('li', {}, '「Oura でつなぐ」を押し、Oura の画面で許可します。数値は15分ほどで届きます。', h('div', { class: 'mt' }, connect))),
+      h('p', { class: 'help mt' }, 'つながりは30日で切れます。期限が近づくと上にお知らせが出るので、そのときにもう一度つないでください。「つながりを切る」を押すと、15分ほどで Oura 側の許可も取り消します。')));
+}
+
+// Oura の「New Application」の入力欄と、そこに入れる値（項目名は Oura の画面の表記のまま）
+function fillList() {
+  const site = redirectUri();
+  const policy = new URL('policy.html', site).href;
+  const row = (name, ...val) => [h('dt', {}, name), h('dd', {}, ...val)];
+  return h('dl', { class: 'fill' },
+    row('Display Name', codeBox('養生 YOJO')),
+    row('Description', codeBox('自分用の健康管理アプリ')),
+    row('Contact Email', '自分のメールアドレス'),
+    row('Website', codeBox(site)),
+    row('Privacy Policy', codeBox(`${policy}#privacy`)),
+    row('Terms of Service', codeBox(`${policy}#terms`)),
+    row('Redirect URIs', codeBox(site), h('span', { class: 'help' }, '最後の「/」まで、そのまま入れます')),
+    row('Scopes', 'Daily・Heartrate・SpO2・Stress の4つにチェック'));
 }
 
 // リンクを作る（合言葉から親鍵を作り直す。親鍵は端末に保存しない）

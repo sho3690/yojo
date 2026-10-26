@@ -7,7 +7,7 @@ import { appendFile } from 'node:fs/promises';
 import { poll } from '../relay.js';
 import { open } from '../crypto.js';
 import { applyEvent, jstDate, addDays, mergeOura, pruneState, splitState } from '../logic.js';
-import { fetchOura } from './oura.mjs';
+import { fetchOura, revokeOura } from './oura.mjs';
 import { loadKeys, loadState, saveState, stable } from './state-io.mjs';
 
 const log = [];
@@ -21,6 +21,7 @@ async function main() {
   const today = jstDate(now);
 
   // 1) 中継
+  const prevToken = state.oura.token;
   let applied = 0, broken = 0, msgs = [];
   try {
     const since = state.log.lastTime ? Math.max(0, state.log.lastTime - 900) : 'all';
@@ -28,11 +29,22 @@ async function main() {
   } catch (e) { say(`中継に届きませんでした（次の回で取り込みます）: ${e.name}`); }
   for (const m of msgs) {
     try {
+      // 中継の時刻が先すぎるもの（次からの取り込みを飛ばしてしまう）は使わない
+      if (!(m.time > 0) || m.time * 1000 > now + 5 * 60000) { broken++; continue; }
       const ev = await open(keys, m.message);
       if (!ev || typeof ev !== 'object' || Array.isArray(ev)) { broken++; continue; }
+      // 端末は届かなかった記録を3日まで送り直す。それより古いものは昔の暗号文の送り直し（リプレイ）とみなして捨てる
+      const at = Number(ev.at);
+      if (!Number.isFinite(at) || at < now - 7 * 86400000) { broken++; continue; }
+      ev.at = Math.min(at, now);   // 端末の時計が進んでいても、日付の判定はこちらの今日で行う
       ev.time = m.time;
-      if (applyEvent(state, ev, { today: jstDate(Number(ev.at) || m.time * 1000) })) applied++;
+      if (applyEvent(state, ev, { today })) applied++;
     } catch { broken++; }   // おかしなメッセージ1件で全体を止めない
+  }
+  // 切った・つなぎ直したときは、前のトークンを Oura 側でも取り消す（失敗しても続ける）
+  if (prevToken && prevToken !== state.oura.token) {
+    console.log(`::add-mask::${prevToken}`);
+    say(`Oura: 前のつながりを取り消し${(await revokeOura(prevToken)) ? 'ました' : 'できませんでした（Oura の画面から外してください）'}`);
   }
   say(`中継: ${msgs.length}件を確認、${applied}件を反映${broken ? `、読めないもの${broken}件` : ''}`);
 
@@ -41,6 +53,7 @@ async function main() {
   const pat = (process.env.OURA_TOKEN || '').trim();
   const oauthOk = o.source === 'oauth' && !!o.token && (!o.exp || o.exp > now + 10 * 60000);
   const token = oauthOk ? o.token : pat;
+  if (oauthOk) console.log(`::add-mask::${o.token}`);   // Secrets ではないので、万一ログに出ても伏せ字になるように
   const source = oauthOk ? 'oauth' : pat ? 'pat' : '';
   if (!token) {
     if (o.source === 'oauth' && o.token) o.status = 'expired';

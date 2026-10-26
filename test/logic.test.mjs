@@ -25,7 +25,8 @@ test('日付: 日本時間の暦日・月またぎ・表示', () => {
   assert.equal(L.clockMin('2026-10-26T00:30:00+09:00'), 750);
   assert.equal(L.fmtClock(690), '23:30');
   assert.equal(L.fmtClock(750), '0:30');
-  assert.equal(L.isDay('2026-02-30'), true, '形は合っていれば日付として扱う（Date が補正する）');
+  assert.equal(L.isDay('2026-02-30'), false, 'ありえない日付は日付にしない');
+  assert.equal(L.isDay('2028-02-29'), true);
   assert.equal(L.isDay('2026/10/26'), false);
 });
 
@@ -56,6 +57,11 @@ test('Oura の数値を整える: 夜の睡眠を選び、スコアを残し、�
   assert.equal(d.stress.sum, undefined);
   assert.equal(d.spo2.avg, 97.2);
   assert.equal(Object.keys(s.days).length, 1);
+  // 本人が消した睡眠・数値として読めない睡眠は使わない
+  const s2 = L.emptyState();
+  L.mergeOura(s2, { sleep: [{ day: T, type: 'deleted', total_sleep_duration: 30000 }, { day: '2026-10-25', type: 'long_sleep', total_sleep_duration: '7h' }] });
+  assert.deepEqual(s2.days, {});
+  assert.equal(L.latestDay(s2, T), null);
   // 後から一部だけ取れても、ほかは残る
   L.mergeOura(s, { activity: [{ day: T, steps: 9000 }] });
   assert.equal(s.days[T].act.steps, 9000);

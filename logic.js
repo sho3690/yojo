@@ -9,7 +9,7 @@ export const KEEP_DAYS = 400;  // Oura の数値を残す日数（記録は消�
 // ================= 日付 =================
 // Oura の「日」は日本時間の暦日。睡眠は「起きた日」の日付で届く
 const ymd = d => d.toISOString().slice(0, 10);
-export const isDay = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`));
+export const isDay = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) && ymd(new Date(`${s}T00:00:00Z`)) === s;   // 2/31 などは日付にしない
 export const jstDate = (now = Date.now()) => ymd(new Date(now + 9 * 3600000));
 export function addDays(day, n) { const d = new Date(`${day}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return ymd(d); }
 export const daysBetween = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY);
@@ -141,9 +141,9 @@ export const normStress = s => compact({
 });
 export const normSpo2 = s => compact({ avg: num(s?.spo2_percentage?.average, 50, 100, 1), bdi: num(s?.breathing_disturbance_index, 0, 100, 1) });
 
-// その日の主な睡眠（夜の睡眠。無ければいちばん長いもの）
+// その日の主な睡眠（夜の睡眠。無ければいちばん長いもの）。本人が消した睡眠（deleted）は使わない
 export function mainSleep(periods) {
-  const list = (periods || []).filter(p => p && typeof p === 'object' && (p.total_sleep_duration || 0) > 0);
+  const list = (periods || []).filter(p => p && typeof p === 'object' && p.type !== 'deleted' && typeof p.total_sleep_duration === 'number' && p.total_sleep_duration > 0);
   const longs = list.filter(p => p.type === 'long_sleep');
   const pool = longs.length ? longs : list;
   return pool.reduce((best, p) => (!best || p.total_sleep_duration > best.total_sleep_duration ? p : best), null);
@@ -159,15 +159,19 @@ export function mergeOura(state, data) {
   for (const p of data.sleep || []) if (isDay(p?.day)) (periods[p.day] ||= []).push(p);
   for (const [d, list] of Object.entries(periods)) {
     const p = mainSleep(list);
-    if (!p) continue;
+    const v = p ? normSleep(p) : null;
+    if (!v?.total) continue;   // 数値として読めない睡眠は入れない（「今朝の数値が届いた」と見誤らないように）
     const day = touch(d);
     const keep = day.sleep ? { score: day.sleep.score, c: day.sleep.c } : {};
-    day.sleep = compact({ ...keep, ...normSleep(p) });
+    day.sleep = compact({ ...keep, ...v });
   }
   byDay(data.activity, (day, r) => { const v = normActivity(r); if (Object.keys(v).length) day.act = v; });
   byDay(data.stress, (day, r) => { const v = normStress(r); if (Object.keys(v).length) day.stress = v; });
   byDay(data.spo2, (day, r) => { const v = normSpo2(r); if (Object.keys(v).length) day.spo2 = v; });
-  for (const [d, v] of Object.entries(state.days)) if (!Object.keys(v).length) delete state.days[d];
+  for (const [d, v] of Object.entries(state.days)) {
+    for (const [k, x] of Object.entries(v)) if (!x || typeof x !== 'object' || !Object.keys(x).length) delete v[k];
+    if (!Object.keys(v).length) delete state.days[d];
+  }
 }
 
 // ================= 自分の記録 =================
@@ -298,7 +302,7 @@ export const levelOf = score => (score == null ? null : LEVELS.find(l => score >
 
 // 今日の画面に出す日: 今日の睡眠かコンディションが届いていれば今日、まだなら届いている最新の日
 export function latestDay(state, today) {
-  const hasMorning = d => !!(state.days[d]?.ready || state.days[d]?.sleep);
+  const hasMorning = d => { const x = state.days[d]; return x?.ready?.score != null || x?.sleep?.score != null || x?.sleep?.total != null; };
   for (let i = 0; i < 14; i++) { const d = addDays(today, -i); if (hasMorning(d)) return d; }
   return null;
 }

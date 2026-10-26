@@ -15,5 +15,5 @@ self.addEventListener('fetch', e => {
   e.respondWith(fetch(e.request).then(res => {
     if (res.ok && !u.search) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); }
     return res;
-  }).catch(() => caches.match(e.request, { ignoreSearch: true })));
+  }).catch(() => caches.open(CACHE).then(c => c.match(e.request, { ignoreSearch: true }))));   // 同じ置き場の他のアプリの控えは見ない
 });

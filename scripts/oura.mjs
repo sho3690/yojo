@@ -32,6 +32,18 @@ async function getAll(endpoint, token, start, end, { fetchJson = getOnce } = {})
   return out;
 }
 
+// つながりの取り消し（Oura の説明では GET。ダメなら POST も試す）。成功したら true
+export async function revokeOura(token) {
+  const u = `https://api.ouraring.com/oauth/revoke?access_token=${encodeURIComponent(token)}`;
+  for (const method of ['GET', 'POST']) {
+    try {
+      const res = await fetch(u, { method, headers: { 'User-Agent': 'YOJO/1.0' }, signal: AbortSignal.timeout(15000) });
+      if (res.ok) return true;
+    } catch { /* 次の方法へ */ }
+  }
+  return false;
+}
+
 const REQUIRED = { readiness: 'daily_readiness', dailySleep: 'daily_sleep', sleep: 'sleep', activity: 'daily_activity' };
 const OPTIONAL = { stress: 'daily_stress', spo2: 'daily_spo2' };   // 指輪の世代や許可の範囲で取れないことがある
 

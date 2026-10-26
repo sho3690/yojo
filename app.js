@@ -14,7 +14,8 @@ const ls = {
 };
 
 // 鍵は「取り出せない形（non-extractable）」で IndexedDB に置き、親鍵そのものは保存しない。
-// sho3690.github.io は他のアプリと同じ置き場なので、万一そちらに不正なスクリプトが入っても鍵を持ち出せないように。
+// sho3690.github.io は他のアプリと同じ置き場なので、万一そちらに不正なスクリプトが入っても鍵を持ち出せないように
+// （ただし、その場で鍵を使って読むことまでは防げない。根本策は独自ドメインへの移設）。
 const keyStore = {
   db: null,
   async open() {
@@ -65,6 +66,7 @@ const app = {
   view: 'today', period: 30, sheet: null, lastSnap: 0, relayOk: true, snapOk: true, trigger: null, es: null,
   specs: [], chartsFirst: true, oauthReturn: null,
 };
+// daily: 睡眠・回復・活動 / spo2: 血中酸素。睡眠の記録には心拍の並びも含まれるため、取れないことがないよう heartrate も求める
 const SCOPE = 'daily heartrate spo2';
 const AUTHORIZE = 'https://cloud.ouraring.com/oauth/authorize';
 const redirectUri = () => `${location.origin}${location.pathname}`;
@@ -72,11 +74,8 @@ const repo = () => app.cfg?.repo || 'sho3690/yojo';
 
 // ================= 起動 =================
 async function boot() {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
-  try { app.cfg = await (await fetch('./config.json', { cache: 'no-store' })).json(); }
-  catch { return fatal('設定を読み込めませんでした。電波の良い所で開き直してください。'); }
-
-  // 招待リンク（#k=…）と、Oura から戻ってきたとき（#access_token=… / ?error=…）
+  // 招待リンク（#k=…）と、Oura から戻ってきたとき（#access_token=… / ?error=…）。
+  // 何より先にアドレス欄から消す（読み込みに失敗して止まっても、トークンが残らないように）
   const hash = new URLSearchParams(location.hash.slice(1));
   const query = new URLSearchParams(location.search);
   const linkKey = hash.get('k');
@@ -84,6 +83,10 @@ async function boot() {
   const error = hash.get('error') || query.get('error');
   if (token || error) app.oauthReturn = { token, error, state: hash.get('state') || query.get('state'), expiresIn: Number(hash.get('expires_in')) };
   if (linkKey || token || error) history.replaceState(null, '', `${location.pathname}#/today`);
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
+  try { app.cfg = await (await fetch('./config.json', { cache: 'no-store' })).json(); }
+  catch { return fatal('設定を読み込めませんでした。電波の良い所で開き直してください。'); }
 
   if (linkKey) {
     if (!(await useKey(linkKey))) return showLock({ error: 'このリンクは使えなくなっています。新しいリンクを作ってください。' });
@@ -160,7 +163,7 @@ function start() {
   const cached = ls.json(K.cache, null);
   if (cached?.live) Promise.all([cached.hist ? open(app.keys, cached.hist) : null, open(app.keys, cached.live)])
     .then(([hist, live]) => { if (!app.snap) { app.snap = L.joinState(hist, live); recompute(); } }).catch(() => {});
-  refresh().then(handleOAuthReturn);
+  refresh().catch(() => {}).finally(handleOAuthReturn);
   listen();
   setInterval(tick, 30000);
 }
@@ -766,7 +769,7 @@ function ouraGroup(st) {
         h('li', {}, '登録すると出てくる「Client ID」を貼り付けます。「Client Secret」はいりません（入れないでください）。',
           h('div', { class: 'field mt', style: { marginBottom: 0 } }, h('label', { for: 's-cid' }, 'Client ID'), cid, cidErr)),
         h('li', {}, '「Oura でつなぐ」を押し、Oura の画面で許可します。', h('div', { class: 'mt' }, connect))),
-      h('p', { class: 'help mt' }, 'この方法のつながりは30日で切れます。期限が近づくと上にお知らせが出るので、そのときにもう一度つないでください。')));
+      h('p', { class: 'help mt' }, 'この方法のつながりは30日で切れます。期限が近づくと上にお知らせが出るので、そのときにもう一度つないでください。「つながりを切る」を押すと、15分ほどで Oura 側の許可も取り消します。')));
 }
 
 // リンクを作る（合言葉から親鍵を作り直す。親鍵は端末に保存しない）

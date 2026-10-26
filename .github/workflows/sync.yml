@@ -62,6 +62,10 @@ jobs:
         run: |
           state=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/sync.yml" --jq .state)
           if [ "$state" != "active" ]; then echo "止めてあるので予約しません"; exit 0; fi
+          # 環境 interval の待ち時間が効いていない（環境が消えた等）と、休みなく回り続けてしまう。そのときは予約しない
+          started=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .run_started_at)
+          elapsed=$(( $(date -u +%s) - $(date -u -d "$started" +%s) ))
+          if [ "$elapsed" -lt 600 ]; then echo "::warning::待ち時間が効いていません（${elapsed}秒）。環境 interval を確かめてください"; exit 0; fi
           newer=$(gh run list -R "$GITHUB_REPOSITORY" --workflow sync.yml --limit 20 --json databaseId,status \
             --jq "[.[] | select(.databaseId > $GITHUB_RUN_ID and .status != \"completed\")] | length")
           if [ "$newer" != "0" ]; then echo "新しい回が動いているので、予約はそちらに任せます"; exit 0; fi

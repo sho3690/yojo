@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fetchOura, OuraError } from '../scripts/oura.mjs';
+import { fetchOura, OuraError, missingScope } from '../scripts/oura.mjs';
 import { stable } from '../scripts/state-io.mjs';
 
 test('Oura: ページをたどり、取れない任意の項目は空にする', async () => {
@@ -22,6 +22,31 @@ test('Oura: ページをたどり、取れない任意の項目は空にする',
 test('Oura: 鍵が無効（401）なら止めて知らせる', async () => {
   const fetchJson = async () => { throw new OuraError(401); };
   await assert.rejects(fetchOura('t', 'a', 'b', { fetchJson }), e => e.status === 401);
+});
+
+test('Oura: 401 の本文で「許可が足りない」と「鍵が使えない」を見分ける', () => {
+  assert.equal(missingScope('{"detail":"Token is not authorized access daily scope."}'), 'daily');
+  assert.equal(missingScope('{"detail":"Token is not authorized access stress scope."}'), 'stress');
+  assert.equal(missingScope('{"detail":"The access token provided is expired, revoked, malformed, or invalid for other reasons."}'), '');
+  assert.equal(missingScope(''), '');
+});
+
+test('Oura: 必要な許可（daily）が無ければ、どの許可かを付けて止める', async () => {
+  const fetchJson = async () => { throw new OuraError(401, 'daily'); };
+  await assert.rejects(fetchOura('t', 'a', 'b', { fetchJson }), e => e.status === 401 && e.scope === 'daily');
+});
+
+test('Oura: 任意の項目の許可（stress・spo2）が無いだけなら、空にして続ける', async () => {
+  const fetchJson = async u => {
+    const ep = u.pathname.split('/').pop();
+    if (ep === 'daily_stress') throw new OuraError(401, 'stress');
+    if (ep === 'daily_spo2') throw new OuraError(401, 'spo2');
+    return { data: [{ day: 'b' }] };
+  };
+  const data = await fetchOura('t', 'a', 'b', { fetchJson });
+  assert.equal(data.readiness.length, 1);
+  assert.deepEqual(data.stress, []);
+  assert.deepEqual(data.spo2, []);
 });
 
 test('Oura: 混み合い（429）は1回だけやり直す', async () => {

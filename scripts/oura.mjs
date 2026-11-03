@@ -2,12 +2,21 @@
 const BASE = 'https://api.ouraring.com/v2/usercollection';
 
 export class OuraError extends Error {
-  constructor(status) { super(`Oura ${status}`); this.name = 'OuraError'; this.status = status; }
+  constructor(status, scope = '') { super(`Oura ${status}`); this.name = 'OuraError'; this.status = status; this.scope = scope; }
+}
+
+// Oura は「許可（scope）が足りない」も「鍵が使えない（期限切れ・取り消し）」も同じ 401 で返し、本文だけが違う。
+//   許可が足りない: {"detail":"Token is not authorized access daily scope."}
+//   鍵が使えない:   {"detail":"The access token provided is expired, revoked, malformed, or invalid for other reasons."}
+// 足りない許可の名前（daily など）を返す。鍵が使えないときは ''
+export function missingScope(body) {
+  const m = /not authorized (?:to )?access (?:to )?(?:extapi:)?([a-z0-9_]{1,32}) scope/i.exec(String(body || ''));
+  return m ? m[1].toLowerCase() : '';
 }
 
 async function getOnce(url, token) {
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'YOJO/1.0' }, signal: AbortSignal.timeout(20000) });
-  if (!res.ok) throw new OuraError(res.status);
+  if (!res.ok) throw new OuraError(res.status, res.status === 401 ? missingScope((await res.text().catch(() => '')).slice(0, 1000)) : '');
   return res.json();
 }
 async function getAll(endpoint, token, start, end, { fetchJson = getOnce } = {}) {
@@ -52,7 +61,7 @@ export async function fetchOura(token, start, end, opts) {
   for (const [k, ep] of Object.entries(REQUIRED)) data[k] = await getAll(ep, token, start, end, opts);
   for (const [k, ep] of Object.entries(OPTIONAL)) {
     try { data[k] = await getAll(ep, token, start, end, opts); }
-    catch (e) { if (e?.status === 401) throw e; data[k] = []; }
+    catch (e) { if (e?.status === 401 && !e.scope) throw e; data[k] = []; }   // 許可が無いだけなら、その項目は空にして続ける
   }
   return data;
 }

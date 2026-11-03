@@ -71,11 +71,12 @@ async function main() {
       say(`Oura: ${start} から取りました（${few ? '最初の取り込み' : full ? '30日分の見直し' : '直近3日'}）`);
     } catch (e) {
       const st = e?.status;
+      const scope = st === 401 ? e?.scope || '' : '';   // 401 でも、許可が足りないだけなら鍵はまだ使える（期限切れではない）
       o.source = source;
-      o.status = st === 401 ? (source === 'oauth' ? 'expired' : 'invalid') : st === 403 ? 'forbidden' : 'error';
-      o.err = st ? String(st) : 'network';
-      if (st === 401 && source === 'oauth') { o.token = ''; o.exp = 0; }   // 使えないトークンは消す（個人用トークンがあれば次の回からそちらで取る）
-      say(`Oura: 取れませんでした（${o.err}）`);
+      o.status = scope ? 'scope' : st === 401 ? (source === 'oauth' ? 'expired' : 'invalid') : st === 403 ? 'forbidden' : 'error';
+      o.err = scope || (st ? String(st) : 'network');
+      if (st === 401 && !scope && source === 'oauth') { o.token = ''; o.exp = 0; }   // 使えないトークンは消す（個人用トークンがあれば次の回からそちらで取る）
+      say(scope ? `Oura: 許可が足りません（${scope}）` : `Oura: 取れませんでした（${o.err}）`);
     }
   }
 

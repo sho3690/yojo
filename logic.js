@@ -418,6 +418,9 @@ export function fmtDiff(key, diff) {
 }
 
 // ================= 接続の状態 =================
+// Oura の開発者ページ（Scopes のチェック欄）での表記
+const SCOPE_LABEL = { daily: 'Daily', heartrate: 'Heartrate', spo2: 'SpO2', stress: 'Stress' };
+export const scopeLabel = s => SCOPE_LABEL[s] || '';
 export function ouraState(o, now = Date.now()) {
   const soon = o.source === 'oauth' && o.exp && o.exp - now < 7 * DAY;
   if (o.source === 'oauth' && o.exp && o.exp <= now) return { key: 'expired', dot: 'off', text: 'Oura とのつながりの期限が切れました' };
@@ -427,6 +430,7 @@ export function ouraState(o, now = Date.now()) {
     case 'invalid': return { key: 'invalid', dot: 'off', text: 'Oura に受け付けてもらえませんでした（トークンを確かめてください）' };
     case 'expired': return { key: 'expired', dot: 'off', text: 'Oura とのつながりの期限が切れました' };
     case 'forbidden': return { key: 'forbidden', dot: 'off', text: 'Oura のメンバーシップが無いと数値を取れません' };
+    case 'scope': return { key: 'scope', dot: 'off', text: scopeLabel(o.err) ? `Oura の「${scopeLabel(o.err)}」の許可が足りません` : 'Oura の許可が足りません' };
     case 'error': return { key: 'error', dot: 'wait', text: 'Oura から取れませんでした（次の回にやり直します）' };
     default: return { key: 'none', dot: 'off', text: 'まだ Oura とつながっていません' };
   }

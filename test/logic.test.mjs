@@ -208,3 +208,11 @@ test('つながりの状態: 期限切れ・期限が近い', () => {
   assert.equal(L.ouraState({ status: 'ok', source: 'oauth', exp: now - 1 }, now).key, 'expired');
   assert.equal(L.ouraState({ status: 'forbidden' }, now).key, 'forbidden');
 });
+
+test('つながりの状態: 許可が足りないときは期限切れと言わず、足りない許可の名前を出す', () => {
+  const now = Date.parse('2026-11-04T00:00:00Z');
+  const s = L.ouraState({ status: 'scope', err: 'daily', source: 'oauth', exp: now + 29 * 86400000 }, now);
+  assert.equal(s.key, 'scope');
+  assert.match(s.text, /Daily/);
+  assert.doesNotMatch(s.text, /期限/);
+});

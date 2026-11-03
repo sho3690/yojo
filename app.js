@@ -384,9 +384,10 @@ function renderBanner() {
   const os = app.st ? L.ouraState(app.st.oura) : null;
   if (app.outbox.length && !app.relayOk) { msg = `送れていない記録が${app.outbox.length}件あります。つながったら自動で送り直します。`; action = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', 'data-action': 'retry' }, '今すぐ送る'); }
   else if (!app.snapOk && !app.snap) { msg = 'データを読み込めませんでした。電波の良い所でもう一度お試しください。'; action = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', 'data-action': 'reload' }, '読み込み直す'); }
-  else if (os && ['soon', 'expired', 'invalid', 'forbidden'].includes(os.key)) {
-    msg = os.key === 'soon' ? `${os.text}（${md(app.st.oura.exp)}まで）。つなぎ直すと30日延びます。` : `${os.text}。`;
-    action = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', 'data-action': 'settings' }, os.key === 'forbidden' ? '確かめる' : 'つなぎ直す');
+  else if (os && ['soon', 'expired', 'invalid', 'forbidden', 'scope'].includes(os.key)) {
+    msg = os.key === 'soon' ? `${os.text}（${md(app.st.oura.exp)}まで）。つなぎ直すと30日延びます。`
+      : os.key === 'scope' ? `${os.text}。Oura の開発者ページでチェックを足してから、つなぎ直してください。` : `${os.text}。`;
+    action = h('button', { class: 'btn btn-secondary btn-sm', type: 'button', 'data-action': 'settings' }, os.key === 'forbidden' ? '確かめる' : os.key === 'scope' ? 'なおし方' : 'つなぎ直す');
   }
   el.hidden = !msg;
   if (msg) el.replaceChildren(h('span', {}, msg), action);
@@ -751,12 +752,13 @@ function ouraGroup(st) {
   return h('section', { class: 'settings-group' }, h('h3', {}, 'Oura とのつながり'),
     h('p', { class: 'status' }, h('span', { class: `dot ${os.dot}`, 'aria-hidden': 'true' }), os.text),
     meta && h('p', { class: 'help mt' }, meta),
+    os.key === 'scope' && scopeFix(o.err),
     o.source === 'oauth' && h('div', { class: 'actions-row' },
       h('button', { class: 'btn btn-secondary btn-sm', type: 'button', 'data-action': 'oauth-again' }, icon('refresh'), 'つなぎ直す（30日延びます）'),
       h('button', { class: 'btn btn-danger btn-sm', type: 'button', 'data-action': 'oura-forget' }, 'つながりを切る')),
     o.source === 'pat' && h('p', { class: 'help mt' }, '個人用トークン（GitHub の OURA_TOKEN）でつながっています。Oura は個人用トークンを近く止めるので、下の手順で切り替えてください。'),
-    !connected && h('p', { class: 'mt' }, '自分用の「連携アプリ」を Oura に登録して（無料・最初の1回だけ）、それでつなぎます。'),
-    h('details', { class: 'fold fold-sm', open: !connected || o.source === 'pat' },
+    !connected && os.key !== 'scope' && h('p', { class: 'mt' }, '自分用の「連携アプリ」を Oura に登録して（無料・最初の1回だけ）、それでつなぎます。'),
+    h('details', { class: 'fold fold-sm', open: (!connected && os.key !== 'scope') || o.source === 'pat' },
       h('summary', {}, 'Oura とつなぐ手順'),
       h('ol', { class: 'steps' },
         h('li', {}, 'Oura の開発者ページを開き、右上の「Create New」を押します。', h('div', { class: 'mt' }, extLink(OURA_APPS, 'Oura の開発者ページ'))),
@@ -766,6 +768,18 @@ function ouraGroup(st) {
           h('div', { class: 'field mt', style: { marginBottom: 0 } }, h('label', { for: 's-cid' }, 'Client ID'), cid, cidErr)),
         h('li', {}, '「Oura でつなぐ」を押し、Oura の画面で許可します。数値は15分ほどで届きます。', h('div', { class: 'mt' }, connect))),
       h('p', { class: 'help mt' }, 'つながりは30日で切れます。期限が近づくと上にお知らせが出るので、そのときにもう一度つないでください。「つながりを切る」を押すと、15分ほどで Oura 側の許可も取り消します。')));
+}
+
+// 許可が足りないとき（Oura の連携アプリの Scopes にチェックが無い）のなおし方
+function scopeFix(scope) {
+  const name = L.scopeLabel(scope) || 'Daily';
+  return h('div', { class: 'mt' },
+    h('p', {}, `Oura に登録した連携アプリで「${name}」にチェックが入っていないため、数値を取れません（期限切れではありません）。`),
+    h('ol', { class: 'steps' },
+      h('li', {}, 'Oura の開発者ページで「養生 YOJO」の「View Details」→「Edit」を押します。', h('div', { class: 'mt' }, extLink(OURA_APPS, 'Oura の開発者ページ'))),
+      h('li', {}, 'Scopes の Daily・Heartrate・SpO2・Stress にチェックを入れます。'),
+      h('li', {}, '「I agree to the Oura API Agreement」にチェックを入れ、「Save Changes」を押します。'),
+      h('li', {}, 'ここに戻って「つなぎ直す」を押し、Oura の画面で許可します。数値は15分ほどで届きます。')));
 }
 
 // Oura の「New Application」の入力欄と、そこに入れる値（項目名は Oura の画面の表記のまま）
@@ -781,7 +795,7 @@ function fillList() {
     row('Privacy Policy', codeBox(`${policy}#privacy`)),
     row('Terms of Service', codeBox(`${policy}#terms`)),
     row('Redirect URIs', codeBox(site), h('span', { class: 'help' }, '最後の「/」まで、そのまま入れます')),
-    row('Scopes', 'Daily・Heartrate・SpO2・Stress の4つにチェック'));
+    row('Scopes', 'Daily・Heartrate・SpO2・Stress の4つにチェック', h('span', { class: 'help' }, 'Daily（睡眠・回復・活動）が無いと数値が届きません')));
 }
 
 // リンクを作る（合言葉から親鍵を作り直す。親鍵は端末に保存しない）

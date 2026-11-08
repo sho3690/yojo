@@ -80,5 +80,5 @@ python3 -m http.server 8793 --bind 127.0.0.1
 ```
 
 ファイル: `index.html` / `style.css` / `app.js`（画面） · `logic.js`（日付・数値の整理・ふだんとの比べ・気づき・記録の反映。副作用なし）
-· `charts.js`（グラフ。evilcharts の作法で ECharts を使う。`vendor/echarts.min.js` は v6.1.0） · `crypto.js`（暗号） · `relay.js`（中継）
+· `charts.js`（グラフ。evilcharts の作法で ECharts を使う。`vendor/echarts.min.js` は v6.1.0） · `machine-dream.js`（幾何学アニメーションの部品 `<machine-dream>`。合言葉の画面と、今日のカードの飾り。体調の色・体調に合わせた速さで動き、「視差効果を減らす」がオンなら今日のカードでは出さない） · `crypto.js`（暗号） · `relay.js`（中継）
 · `scripts/sync.mjs`（取り込み） · `scripts/oura.mjs`（Oura API） · `scripts/state-io.mjs`（暗号化した保存） · `scripts/setup.mjs`（合言葉の作成・変更）

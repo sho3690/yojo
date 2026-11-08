@@ -1,6 +1,6 @@
 // オフラインでも開けるように、画面のファイルを控えておく（常にネットを優先）。
-const CACHE = 'yojo-v1';
-const SHELL = ['./', './index.html', './style.css', './app.js', './logic.js', './crypto.js', './relay.js', './charts.js', './config.json', './manifest.webmanifest', './icons/icon.svg'];
+const CACHE = 'yojo-v2';
+const SHELL = ['./', './index.html', './style.css', './app.js', './logic.js', './crypto.js', './relay.js', './charts.js', './machine-dream.js', './config.json', './manifest.webmanifest', './icons/icon.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

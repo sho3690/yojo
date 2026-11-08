@@ -234,6 +234,8 @@ details.fold .list { margin-top: .75rem; }
 .lock .lead { margin-top: .5rem; color: var(--text-2); font-size: .9375rem; line-height: 1.7; }
 .lock form { margin-top: 1.5rem; padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl); }
 .lock .note { margin-top: 1rem; font-size: .8125rem; color: var(--text-3); line-height: 1.7; }
+.lock-dream { height: 220px; margin: 0 0 1.5rem; border-radius: var(--r-xl); border: 1px solid var(--border); --md-text: #e9ecef; --md-muted: #8fb3c4; --md-font: var(--font); }
+@media (max-height: 640px) { .lock-dream { height: 150px; } }
 
 /* ---- 入力 ---- */
 .field { display: grid; gap: .375rem; margin-bottom: 1.25rem; }
@@ -354,7 +356,14 @@ details.raw summary { cursor: pointer; min-height: 44px; display: flex; align-it
 .tone-info, .tone-neutral { --tone: var(--accent); --tone-bg: var(--accent-muted); }
 
 /* ---- 今日の大きな数字 ---- */
-.hero-card { padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl); }
+.hero-card { position: relative; overflow: hidden; isolation: isolate; padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-xl); }
+/* 体調の色で動く幾何学の飾り。文字の下に敷き、左へ向けて消していく */
+.hero-card { --dream-near: var(--tone); --dream-far: var(--stage-light); }
+.hero-dream { position: absolute; z-index: -1; top: -.5rem; right: -2.5rem; width: min(62%, 340px); height: 13rem; opacity: .55; pointer-events: none;
+  -webkit-mask-image: linear-gradient(to left, #000 45%, transparent); mask-image: linear-gradient(to left, #000 50%, transparent 95%); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .hero-dream { opacity: .75; } }
+:root[data-theme="dark"] .hero-dream { opacity: .75; }
+@media (prefers-reduced-motion: reduce) { .hero-dream { display: none; } }
 .hero-top { display: flex; align-items: flex-end; flex-wrap: wrap; gap: .5rem 1rem; }
 .hero-kicker { display: block; font-size: .875rem; font-weight: 700; color: var(--text-2); margin-bottom: .25rem; }
 .score { font-size: 4rem; font-weight: 800; line-height: 1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }

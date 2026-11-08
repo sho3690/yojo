@@ -3,6 +3,7 @@ import * as L from './logic.js';
 import { keysFrom, deriveMaster, seal, open, b64u } from './crypto.js';
 import { publish, poll, MAX_BODY } from './relay.js';
 import { mountCharts, disposeCharts } from './charts.js';
+import './machine-dream.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const K = { cache: 'yojo.cache', outbox: 'yojo.outbox', sent: 'yojo.sent', period: 'yojo.period', oauth: 'yojo.oauth' };
@@ -118,6 +119,23 @@ function fatal(msg) {
     h('button', { class: 'btn btn-primary', type: 'button', onclick: () => location.reload() }, '開き直す')));
 }
 
+// ---- 幾何学のアニメーション（machine-dream.js）----
+// 色は CSS の --dream-near / --dream-far から取る（明るい・暗い表示や体調の色に合わせるため）
+function tintDreams(root = document) {
+  for (const el of root.querySelectorAll('machine-dream')) {
+    const cs = getComputedStyle(el);
+    const near = cs.getPropertyValue('--dream-near').trim(), far = cs.getPropertyValue('--dream-far').trim();
+    if (near) el.setAttribute('near-color', near);
+    if (far) el.setAttribute('far-color', far);
+  }
+}
+// 合言葉の画面: 夜の窓のように、16の形が移り変わる（タップで次の形）
+const lockDream = () => h('machine-dream', { class: 'lock-dream', background: '#08111c', 'near-color': '#90e0ef', 'far-color': '#0077b6', hold: '6' });
+// 今日のカード: 体調の色で、体調に合わせた速さで動く飾り（読み上げない・触れない）
+const DREAM_SPEED = { optimal: 1, good: .8, fair: .6, low: .45 };
+const heroDream = lv => h('machine-dream', { class: 'hero-dream', 'aria-hidden': 'true', interactive: 'false', hud: 'none', background: 'transparent',
+  shapes: 'harmonics,sphere,torus,helix,lissajous,shell,ripple', points: '900', hold: '7', speed: String(DREAM_SPEED[lv?.key] ?? .8) });
+
 // ---- 合言葉の画面 ----
 function showLock({ error = '' } = {}) {
   const root = $('#lock');
@@ -145,11 +163,12 @@ function showLock({ error = '' } = {}) {
     h('p', { class: 'help', id: 'pw-help' }, 'はじめに作った合言葉です（例: abcde-fghjk-…）。設定で作ったリンクから開けば入力はいりません。'),
     err),
   submit);
-  root.replaceChildren(h('div', { class: 'lock-card' }, brand(),
+  root.replaceChildren(h('div', { class: 'lock-card' }, lockDream(), brand(),
     h('h1', {}, '合言葉で開きます'),
     h('p', { class: 'lead' }, 'Oura の数値と毎日の記録から、体調を自分のふだんと比べて、やさしい言葉で伝える健康管理アプリです。'),
     form,
     h('p', { class: 'note' }, '健康のデータは合言葉で暗号化して保存しています。合言葉を知らない人には中身が見えません。')));
+  tintDreams(root);
   pw.focus();
 }
 
@@ -180,7 +199,7 @@ function wire() {
   const d = $('#sheet');
   d.addEventListener('close', () => { app.sheet = null; d.replaceChildren(); app.trigger?.focus?.({ preventScroll: true }); app.trigger = null; });
   d.addEventListener('click', e => { if (e.target === d) d.close(); });
-  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (app.view === 'trends' && app.specs.length) mountCharts(app.specs); });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { tintDreams(); if (app.view === 'trends' && app.specs.length) mountCharts(app.specs); });
 }
 
 // ---- データの取得と合成 ----
@@ -374,6 +393,7 @@ function render() {
   disposeCharts();
   view.replaceChildren(...parts);
   if (app.specs.length) { mountCharts(app.specs, { first: app.chartsFirst }); app.chartsFirst = false; }
+  tintDreams(view);
   if (app.sheet && !app.sheet.draft && (app.sheet.kind === 'day' || app.sheet.kind === 'settings')) renderSheet();   // 入力中のシートは書き換えない
 }
 
@@ -429,6 +449,7 @@ function hero(sum) {
   const kind = sum.scoreKind === 'sleep' ? '睡眠スコア' : 'コンディション';
   const lvIcon = lv?.key === 'low' ? 'alert' : lv?.key === 'fair' ? 'warn' : 'ok';
   return h('section', { class: `hero-card tone-${LEVEL_TONE[lv?.key] || 'neutral'}`, 'aria-labelledby': 'hero-k' },
+    heroDream(lv),
     h('span', { class: 'hero-kicker', id: 'hero-k' }, `${kind}（100点満点）`),
     h('div', { class: 'hero-top' },
       h('p', { class: 'score' }, sum.score ?? '—', h('small', {}, '/100')),
